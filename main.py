@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from transformers import BartTokenizer, BartForConditionalGeneration
 import torch
+from config import *
 
 # Load the data
 df = pd.read_csv('data/anime-dataset-2023.csv')
@@ -20,10 +21,6 @@ def tokenize_and_encode(text, max_length):
         truncation=True,
         return_tensors='pt'
     )
-
-# Set maximum lengths for genres and synopses
-MAX_GENRE_LENGTH = 32 # 23
-MAX_SYNOPSIS_LENGTH = 1024 # 920
 
 # Prepare input (genres) and output (synopses) data
 input_ids = []
@@ -61,7 +58,7 @@ batch_size = 4
 
 # Training loop
 num_epochs = 3 
-print("training...")
+print("Training...")
 for epoch in range(num_epochs):
     model.train()
     total_loss = 0
@@ -80,4 +77,18 @@ for epoch in range(num_epochs):
 
     avg_loss = total_loss / (len(train_inputs) / batch_size)
     print(f"Epoch {epoch+1}/{num_epochs} completed. Average loss: {avg_loss:.4f}")
+    
+    # Save the model after each epoch
+    model_save_path = f'anime_synopsis_generator_epoch_{epoch+1}.pt'
+    torch.save(model.state_dict(), model_save_path)
+    print(f"Model saved to {model_save_path}")
 
+# Save the final model
+final_model_save_path = 'model/anime_synopsis_generator_final.pt'
+torch.save(model.state_dict(), final_model_save_path)
+print(f"Final model saved to {final_model_save_path}")
+
+# Save the tokenizer
+tokenizer_save_path = 'model/anime_synopsis_tokenizer'
+tokenizer.save_pretrained(tokenizer_save_path)
+print(f"Tokenizer saved to {tokenizer_save_path}")
