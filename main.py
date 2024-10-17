@@ -53,11 +53,11 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
 # Set up the training loop
-optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
-batch_size = 4
+optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
+batch_size = BATCH_SIZE
 
 # Training loop
-num_epochs = 3 
+num_epochs = NUM_EPOCHS 
 print("Training...")
 for epoch in range(num_epochs):
     model.train()
