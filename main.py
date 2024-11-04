@@ -3,10 +3,12 @@ from sklearn.model_selection import train_test_split
 from transformers import BartTokenizer, BartForConditionalGeneration
 import torch
 from config import *
+from tqdm import tqdm
 
 # Load the data
 df = pd.read_csv('data/anime-dataset-2023.csv')
 data = df[['Genres', 'Synopsis']]
+data = data.drop(data[data['Synopsis'] == 'No description available for this anime.'].index)
 
 # Initialize the BART tokenizer
 tokenizer = BartTokenizer.from_pretrained('facebook/bart-base')
@@ -61,22 +63,37 @@ num_epochs = NUM_EPOCHS
 print("Training...")
 for epoch in range(num_epochs):
     model.train()
-    total_loss = 0
-    for batch in range(0, len(train_inputs), batch_size):
+    total_train_loss = 0
+    for batch in tqdm(range(0, len(train_inputs), batch_size)):
         batch_inputs = train_inputs[batch:batch+batch_size].to(device)
         batch_masks = train_masks[batch:batch+batch_size].to(device)
         batch_outputs = train_outputs[batch:batch+batch_size].to(device)
 
         outputs = model(input_ids=batch_inputs, attention_mask=batch_masks, labels=batch_outputs)
         loss = outputs.loss
-        total_loss += loss.item()
+        total_train_loss += loss.item()
 
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
-    avg_loss = total_loss / (len(train_inputs) / batch_size)
-    print(f"Epoch {epoch+1}/{num_epochs} completed. Average loss: {avg_loss:.4f}")
+    avg_train_loss = total_train_loss / (len(train_inputs) / batch_size)
+
+    total_test_loss = 0
+    model.eval()
+    for batch in tqdm(range(0, len(test_inputs), batch_size)):
+        batch_inputs = test_inputs[batch:batch+batch_size].to(device)
+        batch_masks = test_masks[batch:batch+batch_size].to(device)
+        batch_outputs = test_outputs[batch:batch+batch_size].to(device)
+
+        with torch.no_grad():
+            outputs = model(input_ids=batch_inputs, attention_mask=batch_masks, labels=batch_outputs)
+            loss = outputs.loss
+            total_test_loss += loss.item()
+
+    avg_test_loss = total_test_loss / (len(test_inputs) / batch_size)
+
+    print(f"Epoch {epoch+1}/{num_epochs} completed. Average loss: {avg_train_loss:.4f} (Train), {avg_test_loss:.4f} (Test)")
     
     # Save the model after each epoch
     model_save_path = f'anime_synopsis_generator_epoch_{epoch+1}.pt'
